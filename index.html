@@ -239,22 +239,14 @@
             20%, 40%, 60%, 80% { transform: translateX(5px); }
         }
 
-        .api-setup {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
+        .info-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 10px 15px;
             border-radius: 10px;
             margin-bottom: 20px;
-        }
-
-        .api-input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-family: monospace;
+            font-size: 0.85em;
+            text-align: center;
         }
     </style>
 </head>
@@ -263,11 +255,8 @@
         <h1>📚 История по Эмодзи</h1>
         <p class="subtitle">Введи эмодзи и получи уникальную историю!</p>
         
-        <div class="api-setup" id="apiSetup">
-            <strong>⚙️ Настройка API</strong>
-            <p style="margin-top: 10px; font-size: 0.9em;">Введи свой API ключ Claude (он останется только в твоём браузере):</p>
-            <input type="password" class="api-input" id="apiKey" placeholder="sk-ant-api...">
-            <button onclick="saveApiKey()" style="margin-top: 10px; padding: 8px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Сохранить</button>
+        <div class="info-badge">
+            💡 Демо-версия: истории создаются на основе твоих эмодзи
         </div>
 
         <div class="emoji-input-container">
@@ -313,6 +302,154 @@
         let selectedGenre = 'сказка';
         let isGenerating = false;
 
+        // База данных эмодзи с их значениями
+        const emojiMeanings = {
+            '🐸': { name: 'лягушка', type: 'животное' },
+            '👑': { name: 'корона', type: 'предмет' },
+            '💎': { name: 'алмаз', type: 'предмет' },
+            '🚀': { name: 'ракета', type: 'транспорт' },
+            '👽': { name: 'пришелец', type: 'персонаж' },
+            '🌍': { name: 'Земля', type: 'место' },
+            '🧙‍♂️': { name: 'волшебник', type: 'персонаж' },
+            '🐉': { name: 'дракон', type: 'существо' },
+            '🗡️': { name: 'меч', type: 'предмет' },
+            '🏴‍☠️': { name: 'пиратский флаг', type: 'символ' },
+            '🦜': { name: 'попугай', type: 'животное' },
+            '💰': { name: 'мешок золота', type: 'предмет' },
+            '👻': { name: 'призрак', type: 'существо' },
+            '🏚️': { name: 'старый дом', type: 'место' },
+            '🕯️': { name: 'свеча', type: 'предмет' },
+            '🦄': { name: 'единорог', type: 'существо' },
+            '🌈': { name: 'радуга', type: 'явление' },
+            '✨': { name: 'волшебство', type: 'явление' },
+            '🐻': { name: 'медведь', type: 'животное' },
+            '🌙': { name: 'луна', type: 'объект' },
+            '⭐': { name: 'звезда', type: 'объект' },
+            '🔮': { name: 'магический шар', type: 'предмет' },
+            '🏰': { name: 'замок', type: 'место' },
+            '🧚': { name: 'фея', type: 'персонаж' },
+            '🎭': { name: 'маски', type: 'предмет' },
+            '🦊': { name: 'лиса', type: 'животное' },
+            '🌺': { name: 'цветок', type: 'растение' },
+            '🎪': { name: 'цирк', type: 'место' },
+            '🤖': { name: 'робот', type: 'персонаж' },
+            '🛸': { name: 'НЛО', type: 'транспорт' },
+            '🧸': { name: 'плюшевый мишка', type: 'предмет' },
+            '🎨': { name: 'палитра', type: 'предмет' },
+            '🎵': { name: 'музыка', type: 'явление' },
+            '🍄': { name: 'гриб', type: 'растение' },
+            '🦋': { name: 'бабочка', type: 'животное' },
+            '🌊': { name: 'волна', type: 'явление' },
+            '⚡': { name: 'молния', type: 'явление' },
+            '🔥': { name: 'огонь', type: 'явление' },
+            '❄️': { name: 'снежинка', type: 'явление' },
+            '🌸': { name: 'сакура', type: 'растение' }
+        };
+
+        // Шаблоны историй для разных жанров
+        const storyTemplates = {
+            'сказка': {
+                beginnings: [
+                    'В тридевятом царстве, в тридесятом государстве жил-был {character}.',
+                    'Давным-давно, когда {object} обладал волшебной силой, случилась эта история.',
+                    'Жил-был {character}, который мечтал найти {object}.',
+                    'В далёкой стране, где {phenomenon} случается каждый день, начинается наша сказка.'
+                ],
+                middles: [
+                    'Однажды {character} отправился в путешествие и встретил {animal}, который сказал: "Я знаю, где спрятан {object}!"',
+                    'Но злой колдун украл {object} и спрятал его в {place}. Только {character} мог его вернуть.',
+                    '{character} должен был пройти через {place}, чтобы найти волшебный {object}.',
+                    'Три дня и три ночи {character} искал {object}, пока не встретил мудрого {animal}.'
+                ],
+                endings: [
+                    'И с тех пор {character} и {animal} жили долго и счастливо, а {object} приносил им удачу.',
+                    'Так {character} понял, что настоящее сокровище - это дружба с {animal}, а не {object}.',
+                    'Вернув {object} на место, {character} спас королевство и стал героем.',
+                    'И теперь каждый раз, когда видишь {phenomenon}, знай - это {character} творит чудеса.'
+                ]
+            },
+            'приключение': {
+                beginnings: [
+                    '{character} проснулся в незнакомом {place} с {object} в руках.',
+                    'Экспедиция в поисках {object} привела {character} в самое сердце {place}.',
+                    'Карта указывала, что {object} спрятан там, где {phenomenon} встречается с землёй.',
+                    '{character} и верный {animal} отправились в опасное путешествие.'
+                ],
+                middles: [
+                    'Преодолев множество ловушек в {place}, они наконец увидели {object}.',
+                    'Но путь преграждал огромный {creature}, охранявший {object} веками.',
+                    '{transport} сломался посреди пути, и {character} пришлось идти пешком через {place}.',
+                    'В древнем {place} {character} нашёл подсказку - {object} охраняет {creature}.'
+                ],
+                endings: [
+                    'С {object} в руках, {character} вернулся домой настоящим героем.',
+                    'Приключение закончилось, но {character} знал - впереди ждут новые открытия.',
+                    '{object} оказался ключом к ещё большей тайне, и {character} отправился дальше.',
+                    'Так {character} и {animal} стали легендарными искателями приключений.'
+                ]
+            },
+            'детектив': {
+                beginnings: [
+                    'В полночь из музея пропал {object}, а на месте преступления остался только {object2}.',
+                    'Детектив {character} получил странное письмо: "Найди {object} в {place}".',
+                    'Когда {phenomenon} озарило небо, {character} понял - это не простая кража {object}.',
+                    '{character} расследовал исчезновение {object} уже третий день.'
+                ],
+                middles: [
+                    'Следы привели в {place}, где {animal} охранял тайник с уликами.',
+                    'Подозрение пало на {character2}, но алиби было железным - в это время был {phenomenon}.',
+                    'В {place} нашлась важная улика - {object2}, принадлежащий преступнику.',
+                    '{character} понял: {object} украден, чтобы отвлечь внимание от {object2}.'
+                ],
+                endings: [
+                    'Преступником оказался {character2}, а {object} был спрятан в {place}.',
+                    'Раскрыв дело, {character} вернул {object} владельцу и получил награду.',
+                    'Оказалось, {animal} всё время знал, где {object}, но не мог сказать.',
+                    'Дело раскрыто: {object} никто не крал, это была хитрая инсценировка.'
+                ]
+            },
+            'фантастика': {
+                beginnings: [
+                    'В 2157 году {character} обнаружил сигнал от {object} с планеты {place}.',
+                    'Когда {transport} приземлился на неизвестной планете, {character} увидел {phenomenon}.',
+                    '{character} - последний человек, который помнит времена до появления {creature}.',
+                    'Эксперимент с {object} открыл портал в мир, где правит {character2}.'
+                ],
+                middles: [
+                    '{transport} летел сквозь {phenomenon}, когда {character} заметил странный {object}.',
+                    'На планете {character} встретил {creature}, который искал тот же {object}.',
+                    'Искусственный интеллект {character2} захватил {place} с помощью {object}.',
+                    '{phenomenon} оказалось порталом, ведущим к {object} невероятной мощи.'
+                ],
+                endings: [
+                    '{character} спас галактику, используя {object} против {creature}.',
+                    'Вернувшись на Землю, {character} принёс технологию {object}, изменившую мир.',
+                    'Так началась новая эра, где {character} и {creature} живут в мире.',
+                    '{object} оказался ключом к путешествиям сквозь {phenomenon}.'
+                ]
+            },
+            'комедия': {
+                beginnings: [
+                    '{character} решил стать супергероем, но вместо суперсилы получил {object}.',
+                    'Всё началось, когда {animal} украл {object} и убежал в {place}.',
+                    '{character} перепутал {object} с {object2} и случайно вызвал {phenomenon}.',
+                    'На день рождения {character} подарили {animal}, который умел только есть {object}.'
+                ],
+                middles: [
+                    'Пытаясь поймать {animal}, {character} разрушил половину {place}.',
+                    '{creature} оказался вегетарианцем и вместо людей ел только {object}.',
+                    'В {place} {character} встретил {character2}, который тоже искал {object}, но для салата.',
+                    'Оказалось, {object} - это не сокровище, а любимая игрушка {animal}.'
+                ],
+                endings: [
+                    'В итоге {character} и {animal} открыли ресторан, где подают {object}.',
+                    'Все смеялись, когда узнали, что {object} всё время был у {animal}.',
+                    '{character} стал знаменитым комиком, рассказывая историю про {object}.',
+                    'И теперь каждый раз, видя {phenomenon}, все вспоминают и смеются.'
+                ]
+            }
+        };
+
         function addEmoji(emojis) {
             document.getElementById('emojiInput').value = emojis;
         }
@@ -325,28 +462,99 @@
             selectedGenre = genre;
         }
 
-        function saveApiKey() {
-            const apiKey = document.getElementById('apiKey').value;
-            if (apiKey) {
-                localStorage.setItem('claude_api_key', apiKey);
-                document.getElementById('apiSetup').style.display = 'none';
-                alert('API ключ сохранён! Теперь можно создавать истории.');
+        function parseEmojis(emojiString) {
+            const emojis = [];
+            const emojiRegex = /\p{Emoji}/gu;
+            const matches = emojiString.match(emojiRegex);
+            
+            if (matches) {
+                matches.forEach(emoji => {
+                    if (emojiMeanings[emoji]) {
+                        emojis.push({
+                            emoji: emoji,
+                            ...emojiMeanings[emoji]
+                        });
+                    } else {
+                        // Для неизвестных эмодзи генерируем случайное значение
+                        emojis.push({
+                            emoji: emoji,
+                            name: 'загадочный символ',
+                            type: 'предмет'
+                        });
+                    }
+                });
             }
+            
+            return emojis;
         }
 
-        // Проверяем, есть ли сохранённый ключ
-        if (localStorage.getItem('claude_api_key')) {
-            document.getElementById('apiSetup').style.display = 'none';
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function generateStoryFromTemplate(emojis, genre) {
+            const template = storyTemplates[genre];
+            const parsedEmojis = parseEmojis(emojis);
+            
+            if (parsedEmojis.length === 0) {
+                return null;
+            }
+
+            // Собираем элементы по типам
+            const characters = parsedEmojis.filter(e => e.type === 'персонаж' || e.type === 'существо');
+            const objects = parsedEmojis.filter(e => e.type === 'предмет');
+            const places = parsedEmojis.filter(e => e.type === 'место');
+            const animals = parsedEmojis.filter(e => e.type === 'животное');
+            const phenomena = parsedEmojis.filter(e => e.type === 'явление');
+            const transports = parsedEmojis.filter(e => e.type === 'транспорт');
+            const creatures = parsedEmojis.filter(e => e.type === 'существо');
+
+            // Функция замены плейсхолдеров
+            function replacePlaceholders(text) {
+                const replacements = {
+                    '{character}': characters.length > 0 ? getRandomElement(characters).name : 
+                                  animals.length > 0 ? getRandomElement(animals).name : 
+                                  getRandomElement(parsedEmojis).name,
+                    '{character2}': characters.length > 1 ? characters[1].name : 
+                                   animals.length > 0 ? getRandomElement(animals).name : 
+                                   'таинственный незнакомец',
+                    '{object}': objects.length > 0 ? getRandomElement(objects).name : 
+                               getRandomElement(parsedEmojis).name,
+                    '{object2}': objects.length > 1 ? objects[1].name : 
+                                parsedEmojis.length > 1 ? parsedEmojis[1].name : 
+                                'странный предмет',
+                    '{place}': places.length > 0 ? getRandomElement(places).name : 
+                              'таинственное место',
+                    '{animal}': animals.length > 0 ? getRandomElement(animals).name : 
+                               creatures.length > 0 ? getRandomElement(creatures).name : 
+                               'загадочное существо',
+                    '{phenomenon}': phenomena.length > 0 ? getRandomElement(phenomena).name : 
+                                   'странное явление',
+                    '{transport}': transports.length > 0 ? getRandomElement(transports).name : 
+                                  'транспорт',
+                    '{creature}': creatures.length > 0 ? getRandomElement(creatures).name : 
+                                 animals.length > 0 ? getRandomElement(animals).name : 
+                                 'существо'
+                };
+
+                let result = text;
+                for (const [placeholder, replacement] of Object.entries(replacements)) {
+                    result = result.replace(new RegExp(placeholder, 'g'), replacement);
+                }
+                return result;
+            }
+
+            // Генерируем историю
+            const beginning = replacePlaceholders(getRandomElement(template.beginnings));
+            const middle = replacePlaceholders(getRandomElement(template.middles));
+            const ending = replacePlaceholders(getRandomElement(template.endings));
+
+            return `${beginning}\n\n${middle}\n\n${ending}`;
         }
 
         async function generateStory() {
-            const apiKey = localStorage.getItem('claude_api_key');
-            if (!apiKey) {
-                showError('Сначала введи API ключ!');
-                return;
-            }
-
             const emojis = document.getElementById('emojiInput').value.trim();
+            
             if (!emojis) {
                 showError('Введи хотя бы один эмодзи!');
                 return;
@@ -359,41 +567,20 @@
             button.classList.add('loading');
             button.disabled = true;
 
-            try {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-3-5-sonnet-20241022',
-                        max_tokens: 1000,
-                        messages: [{
-                            role: 'user',
-                            content: `Напиши короткую забавную историю в жанре "${selectedGenre}" (3-4 абзаца), которая обязательно включает эти элементы: ${emojis}. 
-                            История должна быть креативной, неожиданной и с юмором. Пиши на русском языке.`
-                        }]
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Ошибка API');
+            // Имитируем загрузку для реалистичности
+            setTimeout(() => {
+                const story = generateStoryFromTemplate(emojis, selectedGenre);
+                
+                if (story) {
+                    displayStory(story);
+                } else {
+                    showError('Не удалось создать историю. Попробуй другие эмодзи!');
                 }
 
-                const data = await response.json();
-                const story = data.content[0].text;
-
-                displayStory(story);
-            } catch (error) {
-                console.error('Error:', error);
-                showError('Упс! Что-то пошло не так. Проверь API ключ и попробуй снова.');
-            } finally {
                 isGenerating = false;
                 button.classList.remove('loading');
                 button.disabled = false;
-            }
+            }, 1500);
         }
 
         function displayStory(story) {
